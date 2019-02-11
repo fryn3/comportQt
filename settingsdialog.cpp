@@ -75,6 +75,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
             this, &SettingsDialog::checkCustomBaudRatePolicy);
     connect(m_ui->serialPortInfoListBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &SettingsDialog::checkCustomDevicePathPolicy);
+    connect(m_ui->btnSearch, &QPushButton::clicked,
+            this, &SettingsDialog::fillPortsInfo);
 
     fillPortsParameters();
     fillPortsInfo();
@@ -110,6 +112,7 @@ void SettingsDialog::apply()
 {
     updateSettings();
     hide();
+    emit sigApply();
 }
 
 void SettingsDialog::checkCustomBaudRatePolicy(int idx)
@@ -185,7 +188,7 @@ void SettingsDialog::fillPortsInfo()
         m_ui->serialPortInfoListBox->addItem(list.first(), list);
     }
 
-    m_ui->serialPortInfoListBox->addItem(tr("Custom"));
+//    m_ui->serialPortInfoListBox->addItem(tr("Custom"));
 }
 
 void SettingsDialog::updateSettings()
@@ -215,6 +218,4 @@ void SettingsDialog::updateSettings()
     m_currentSettings.flowControl = static_cast<QSerialPort::FlowControl>(
                 m_ui->flowControlBox->itemData(m_ui->flowControlBox->currentIndex()).toInt());
     m_currentSettings.stringFlowControl = m_ui->flowControlBox->currentText();
-
-    m_currentSettings.localEchoEnabled = m_ui->localEchoCheckBox->isChecked();
 }
