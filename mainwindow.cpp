@@ -18,6 +18,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnConnect, &QPushButton::clicked, this, &MainWindow::slOpenSerialPort);
     connect(ui->btnDisconnect, &QPushButton::clicked, this, &MainWindow::slCloseSerialPort);
     connect(ui->btnMonitorClear, &QPushButton::clicked, ui->pteMonitor, &QPlainTextEdit::clear);
+    connect(ui->rbHex, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
+    connect(ui->rbText, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
+    connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::slReadData);
     ui->lSelectPort->setText(setDialog->settings().name);
     slApply();
     m_msgTimer.restart();
@@ -49,27 +52,51 @@ void MainWindow::slOpenSerialPort()
                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl));
     } else {
         QMessageBox::critical(this, tr("Error"), m_serial->errorString());
-
         ui->statusBar->showMessage(tr("Open error"));
     }
+}
+
+void MainWindow::printMsg(bool isTx, QByteArray data, qint64 time)
+{
+    if (isTx) {
+        if (ui->rbHex->isChecked()) {
+            ui->pteMonitor->appendHtml(QString("<div style='color:black;'>Tx (size = %1, time = %3ms):<pre>%2</pre></div>")
+                          .arg(data.size())
+                          .arg(data.toHex(' ').toUpper().data())
+                          .arg(time));
+        } else {
+            ui->pteMonitor->appendHtml(QString("<div style='color:black;'>Tx (size = %1, time = %3ms):<pre>%2</pre></div>")
+                          .arg(data.size())
+                          .arg(QString(data))
+                          .arg(time));
+        }
+    } else {
+        if (ui->rbHex->isChecked()) {
+            ui->pteMonitor->appendHtml(QString("<div style='color:green;'>Rx (size = %1, time = %3ms):<pre>%2</pre></div>")
+                          .arg(data.size())
+                          .arg(data.toHex(' ').toUpper().data())
+                          .arg(time));
+        } else {
+            ui->pteMonitor->appendHtml(QString("<div style='color:green;'>Rx (size = %1, time = %3ms):<pre>%2</pre></div>")
+                          .arg(data.size())
+                          .arg(QString(data))
+                          .arg(time));
+        }
+    }
+}
+
+void MainWindow::printMsg(HistoryStruct histItem)
+{
+    printMsg(histItem.isTx, histItem.data, histItem.time);
 }
 
 void MainWindow::slSendData(QByteArray data)
 {
     auto time = m_msgTimer.restart();
     m_serial->write(data);
-    if (ui->rbHex->isChecked()) {
-        ui->pteMonitor->appendHtml(QString("<div style='color:black;'>Tx (size = %1, time = %3ms):<pre>%2</pre></div>")
-                      .arg(data.size())
-                      .arg(data.toHex(' ').toUpper().data())
-                      .arg(time));
-    } else {
-        ui->pteMonitor->appendHtml(QString("<div style='color:black;'>Tx (size = %1, time = %3ms):<pre>%2</pre></div>")
-                      .arg(data.size())
-                      .arg(QString(data))
-                      .arg(time));
-    }
-
+    HistoryStruct item { true, data, time };
+    printMsg(item);
+    m_historyRxTx.append(item);
     m_historyTx.removeAll(data);
     m_historyTx.append(data);
 }
@@ -78,22 +105,20 @@ void MainWindow::slReadData()
 {
     const QByteArray data = m_serial->readAll();
     auto time = m_msgTimer.restart();
-    if (ui->rbHex->isChecked()) {
-        ui->pteMonitor->appendHtml(QString("<div style='color:green;'>Rx (size = %1, time = %3ms):<pre>%2</pre></div>")
-                      .arg(data.size())
-                      .arg(data.toHex(' ').toUpper().data())
-                      .arg(time));
-    } else {
-        ui->pteMonitor->appendHtml(QString("<div style='color:green;'>Rx (size = %1, time = %3ms):<pre>%2</pre></div>")
-                      .arg(data.size())
-                      .arg(QString(data))
-                      .arg(time));
-    }
+
+    HistoryStruct item { false, data, time };
+    printMsg(item);
+
+    m_historyRxTx.append(item);
 }
 
 void MainWindow::on_btnSend_clicked()
 {
-    auto data = ui->leSend->text().toLatin1();
+    QString msg = ui->leSend->text();
+    if (ui->rbText->isChecked()) {
+        msg.replace("\\r", "\r");
+    }
+    auto data = msg.toLatin1();
     if (ui->rbHex->isChecked()) {
         slSendData(QByteArray::fromHex(data));
     } else {
@@ -112,6 +137,14 @@ void MainWindow::slCloseSerialPort()
     ui->btnDisconnect->setEnabled(false);
     ui->actConfigure->setEnabled(true);
     ui->statusBar->showMessage(tr("Disconnected"));
+}
+
+void MainWindow::slRadioBtnClicked()
+{
+    ui->pteMonitor->clear();
+    for (HistoryStruct item: m_historyRxTx) {
+        printMsg(item);
+    }
 }
 
 MainWindow::~MainWindow()

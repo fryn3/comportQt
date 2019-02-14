@@ -24,14 +24,24 @@ protected slots:
     void slSendData(QByteArray datagram);
     void on_btnSend_clicked();
     void slReadData();
+    void slRadioBtnClicked();
 private:
     Ui::MainWindow *ui;
     SettingsDialog *setDialog;
     SettingsDialog::Settings m_settings;
     QSerialPort *m_serial;
     int m_indexHistory = 0;
-    QStringList m_historyTx;
+    struct HistoryStruct
+    {
+        bool isTx;
+        QByteArray data;
+        qint64 time;
+    };
+    QVector<HistoryStruct> m_historyRxTx;
+    QVector<QByteArray> m_historyTx;
     QElapsedTimer m_msgTimer;
+    void printMsg(bool isTx, QByteArray data, qint64 time);
+    void printMsg(HistoryStruct histItem);
 };
 
 #endif // MAINWINDOW_H
