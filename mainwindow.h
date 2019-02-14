@@ -25,6 +25,9 @@ protected slots:
     void on_btnSend_clicked();
     void slReadData();
     void slRadioBtnClicked();
+    void slSendComandChange(const QString &newText);
+protected:
+    virtual void keyPressEvent(QKeyEvent *event) override;
 private:
     Ui::MainWindow *ui;
     SettingsDialog *setDialog;

@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->rbHex, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
     connect(ui->rbText, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::slReadData);
+    connect(ui->leSend, &QLineEdit::textChanged, this, &MainWindow::slSendComandChange);
     ui->lSelectPort->setText(setDialog->settings().name);
     slApply();
     m_msgTimer.restart();
@@ -121,7 +122,7 @@ void MainWindow::on_btnSend_clicked()
     auto data = msg.toLatin1();
     if (ui->rbHex->isChecked()) {
         slSendData(QByteArray::fromHex(data));
-    } else {
+    } else if(ui->rbText->isChecked()) {
         slSendData(data);
     }
     ui->leSend->clear();
@@ -141,9 +142,89 @@ void MainWindow::slCloseSerialPort()
 
 void MainWindow::slRadioBtnClicked()
 {
-    ui->pteMonitor->clear();
-    for (HistoryStruct item: m_historyRxTx) {
-        printMsg(item);
+    static QRadioButton *lastClicked = nullptr;
+    auto rb = dynamic_cast<QRadioButton *>(sender());
+    Q_ASSERT(rb);
+    if (lastClicked != rb) {
+        lastClicked = rb;
+        ui->pteMonitor->clear();
+        for (HistoryStruct item: m_historyRxTx) {
+            printMsg(item);
+        }
+        if (ui->rbHex->isChecked()) {
+            QString msg = ui->leSend->text();
+            msg.replace("\\r", "\r");
+            auto data = msg.toLatin1();
+            ui->leSend->setText(data.toHex().data());
+        } else if (ui->rbText->isChecked()) {
+            auto data = ui->leSend->text().toLatin1();
+            QString msg = QString(QByteArray::fromHex(data));
+            msg.replace('\r', "\\r");
+            ui->leSend->setText(msg);
+        }
+    }
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    static QString textLineEditUp;
+    if (!event->text().isEmpty() && ui->leSend->isEnabled()) {
+        if (event->key() == Qt::Key_Enter
+                || event->key() == Qt::Key_Return) {
+            on_btnSend_clicked();
+        } else if (event->key() == Qt::Key_Escape) {
+            ui->pteMonitor->clear();
+        } else if ((ui->rbHex->isChecked()
+                    && ((Qt::Key_0 <= event->key() && event->key() <= Qt::Key_9)
+                   || (Qt::Key_A <= event->key() && event->key() <= Qt::Key_F)))
+                   || (ui->rbText->isChecked()
+                       && ((Qt::Key_Plus <= event->key() && event->key() <= Qt::Key_9)
+                   || (Qt::Key_A <= event->key() && event->key() <= Qt::Key_Z))))
+        {
+            ui->leSend->setFocus();
+            ui->leSend->setText(ui->leSend->text()
+                                          .append(event->text()));
+        }
+    } else if (event->key() == Qt::Key_Up) {
+        if (m_indexHistory == 0) {
+            textLineEditUp = ui->leSend->text();
+        }
+        if (m_historyTx.size() > m_indexHistory) {
+            m_indexHistory++;
+            ui->leSend->setText(m_historyTx.at(m_historyTx.size() - m_indexHistory).toHex());
+        }
+    } else if (event->key() == Qt::Key_Down) {
+        if (m_indexHistory > 0) {
+            m_indexHistory--;
+            if (m_indexHistory == 0) {
+                ui->leSend->setText(textLineEditUp);
+            } else {
+                ui->leSend->setText(m_historyTx.at(m_historyTx.size() - m_indexHistory).toHex());
+            }
+        }
+    } else {
+        QWidget::keyPressEvent(event);
+    }
+}
+
+void MainWindow::slSendComandChange(const QString &newText) {
+    if (ui->rbHex->isChecked()) {
+        int countSpaceLast = newText.count(" ");
+        int cursPos = ui->leSend->cursorPosition();
+        QString t = newText;
+        t.remove(QRegExp("[^a-fA-F0-9]*"));
+        int countSpace = 0;
+        int len = t.length();
+        while ((len - 1) / 2 > countSpace ) {
+            t.insert(len - 2 * ++countSpace, ' ');
+        }
+        t = t.toUpper();
+        if (newText != t) {
+            ui->leSend->setText(t);
+            ui->leSend->setCursorPosition(cursPos + countSpace - countSpaceLast);
+        }
+    } else if (ui->rbText->isChecked()) {
+        // тут особых правил нет
     }
 }
 
