@@ -23,7 +23,7 @@
       <item row="0" column="0">
        <widget class="QPushButton" name="btnSearch">
         <property name="text">
-         <string>Search</string>
+         <string>&amp;Search</string>
         </property>
        </widget>
       </item>
@@ -33,7 +33,10 @@
       <item row="1" column="0" colspan="2">
        <widget class="QLabel" name="descriptionLabel">
         <property name="text">
-         <string>Description:</string>
+         <string>&amp;Description:</string>
+        </property>
+        <property name="buddy">
+         <cstring>serialPortInfoListBox</cstring>
         </property>
        </widget>
       </item>
@@ -84,7 +87,10 @@
       <item row="0" column="0">
        <widget class="QLabel" name="baudRateLabel">
         <property name="text">
-         <string>BaudRate:</string>
+         <string>&amp;BaudRate:</string>
+        </property>
+        <property name="buddy">
+         <cstring>baudRateBox</cstring>
         </property>
        </widget>
       </item>
@@ -94,7 +100,10 @@
       <item row="1" column="0">
        <widget class="QLabel" name="dataBitsLabel">
         <property name="text">
-         <string>Data bits:</string>
+         <string>Data &amp;bits:</string>
+        </property>
+        <property name="buddy">
+         <cstring>dataBitsBox</cstring>
         </property>
        </widget>
       </item>
@@ -104,7 +113,10 @@
       <item row="2" column="0">
        <widget class="QLabel" name="parityLabel">
         <property name="text">
-         <string>Parity:</string>
+         <string>&amp;Parity:</string>
+        </property>
+        <property name="buddy">
+         <cstring>parityBox</cstring>
         </property>
        </widget>
       </item>
@@ -114,7 +126,10 @@
       <item row="3" column="0">
        <widget class="QLabel" name="stopBitsLabel">
         <property name="text">
-         <string>Stop bits:</string>
+         <string>S&amp;top bits:</string>
+        </property>
+        <property name="buddy">
+         <cstring>stopBitsBox</cstring>
         </property>
        </widget>
       </item>
@@ -124,7 +139,10 @@
       <item row="4" column="0">
        <widget class="QLabel" name="flowControlLabel">
         <property name="text">
-         <string>Flow control:</string>
+         <string>&amp;Flow control:</string>
+        </property>
+        <property name="buddy">
+         <cstring>flowControlBox</cstring>
         </property>
        </widget>
       </item>
@@ -152,7 +170,7 @@
      <item>
       <widget class="QPushButton" name="applyButton">
        <property name="text">
-        <string>Apply</string>
+        <string>&amp;Apply</string>
        </property>
       </widget>
      </item>
