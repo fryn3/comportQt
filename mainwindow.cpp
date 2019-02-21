@@ -13,6 +13,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setDialog->setModal(true);
+    ui->lSelectPort->setText(setDialog->settings().name);
+    slApply();
     connect(ui->actConfigure, &QAction::triggered, setDialog, &MainWindow::show);
     connect(setDialog, &SettingsDialog::sigApply, this, &MainWindow::slApply);
     connect(ui->btnConnect, &QPushButton::clicked, this, &MainWindow::slOpenSerialPort);
@@ -22,10 +24,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->rbText, &QRadioButton::clicked, ui->actText, &QAction::trigger);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::slReadData);
     connect(ui->leSend, &QLineEdit::textChanged, this, &MainWindow::slSendComandChange);
+    connect(ui->leTimerMsg, &QLineEdit::textChanged, this, &MainWindow::slSendComandChange);
     connect(ui->actHex, &QAction::triggered, this, &MainWindow::slModeChange);
     connect(ui->actText, &QAction::triggered, this, &MainWindow::slModeChange);
-    ui->lSelectPort->setText(setDialog->settings().name);
-    slApply();
+    connect(&m_timer, &QTimer::timeout, [=] () { slSendData(convertToSend(ui->leTimerMsg->text(), ui->rbHex->isChecked())); });
+
     m_msgTimer.restart();
 }
 
@@ -46,6 +49,7 @@ void MainWindow::slOpenSerialPort()
     m_serial->setStopBits(p.stopBits);
     m_serial->setFlowControl(p.flowControl);
     if (m_serial->open(QIODevice::ReadWrite)) {
+        ui->gbTimer->setEnabled(true);
         ui->gbMonitor->setEnabled(true);
         ui->btnConnect->setEnabled(false);
         ui->btnDisconnect->setEnabled(true);
@@ -63,6 +67,7 @@ void MainWindow::slCloseSerialPort()
 {
     if (m_serial->isOpen())
         m_serial->close();
+    ui->gbTimer->setEnabled(false);
     ui->gbMonitor->setEnabled(false);
     ui->btnConnect->setEnabled(true);
     ui->btnDisconnect->setEnabled(false);
@@ -157,8 +162,16 @@ void MainWindow::slModeChange()
     for (HistoryStruct item: m_historyRxTx) {
         printMsg(item);
     }
-    QByteArray ar = convertToSend(ui->leSend->text(), !ui->rbHex->isChecked());
-    ui->leSend->setText(convertToPrint(ar, ui->rbHex->isChecked()));
+    // leSend
+    {
+        QByteArray ar = convertToSend(ui->leSend->text(), !ui->rbHex->isChecked());
+        ui->leSend->setText(convertToPrint(ar, ui->rbHex->isChecked()));
+    }
+    // leTimerMsg
+    {
+        QByteArray ar = convertToSend(ui->leTimerMsg->text(), !ui->rbHex->isChecked());
+        ui->leTimerMsg->setText(convertToPrint(ar, ui->rbHex->isChecked()));
+    }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -167,7 +180,11 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     if (!event->text().isEmpty() && ui->leSend->isEnabled()) {
         if (event->key() == Qt::Key_Enter
                 || event->key() == Qt::Key_Return) {
-            on_btnSend_clicked();
+            if (ui->leTimerMsg->hasFocus()) {
+                on_btnTimer_clicked();
+            } else {
+                on_btnSend_clicked();
+            }
         } else if (event->key() == Qt::Key_Escape) {
             ui->pteMonitor->clear();
         } else if ((ui->rbHex->isChecked()
@@ -204,9 +221,10 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 }
 
 void MainWindow::slSendComandChange(const QString &newText) {
+    auto le = dynamic_cast<QLineEdit *>(sender());
     if (ui->rbHex->isChecked()) {
         int countSpaceLast = newText.count(" ");
-        int cursPos = ui->leSend->cursorPosition();
+        int cursPos = le->cursorPosition();
         QString t = newText;
         t.remove(QRegExp("[^a-fA-F0-9]*"));
         int countSpace = 0;
@@ -216,11 +234,26 @@ void MainWindow::slSendComandChange(const QString &newText) {
         }
         t = t.toUpper();
         if (newText != t) {
-            ui->leSend->setText(t);
-            ui->leSend->setCursorPosition(cursPos + countSpace - countSpaceLast);
+            le->setText(t);
+            le->setCursorPosition(cursPos + countSpace - countSpaceLast);
         }
     } else if (ui->rbText->isChecked()) {
         // тут особых правил нет
+    }
+}
+
+void MainWindow::on_btnTimer_clicked()
+{
+    if (m_timer.isActive()) {
+        m_timer.stop();
+        ui->spTimerPeriod->setEnabled(true);
+        ui->leTimerMsg->setEnabled(true);
+        ui->btnTimer->setText("&Start");
+    } else {
+        m_timer.start(ui->spTimerPeriod->value());
+        ui->spTimerPeriod->setEnabled(false);
+        ui->leTimerMsg->setEnabled(false);
+        ui->btnTimer->setText("&Stop");
     }
 }
 

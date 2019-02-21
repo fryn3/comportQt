@@ -3,6 +3,7 @@
 
 #include <QElapsedTimer>
 #include <QMainWindow>
+#include <QTimer>
 #include "settingsdialog.h"
 
 namespace Ui {
@@ -15,7 +16,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
 protected slots:
     void slApply();
@@ -26,6 +27,7 @@ protected slots:
     void slReadData();
     void slModeChange();
     void slSendComandChange(const QString &newText);
+    void on_btnTimer_clicked();
 protected:
     struct HistoryStruct
     {
@@ -47,6 +49,7 @@ private:
     QVector<HistoryStruct> m_historyRxTx;
     QVector<QByteArray> m_historyTx;
     QElapsedTimer m_msgTimer;
+    QTimer m_timer;
 };
 
 #endif // MAINWINDOW_H
