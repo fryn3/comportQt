@@ -24,7 +24,7 @@ protected slots:
     void slSendData(QByteArray datagram);
     void on_btnSend_clicked();
     void slReadData();
-    void slRadioBtnClicked();
+    void slModeChange();
     void slSendComandChange(const QString &newText);
 protected:
     struct HistoryStruct

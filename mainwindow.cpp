@@ -18,10 +18,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnConnect, &QPushButton::clicked, this, &MainWindow::slOpenSerialPort);
     connect(ui->btnDisconnect, &QPushButton::clicked, this, &MainWindow::slCloseSerialPort);
     connect(ui->btnMonitorClear, &QPushButton::clicked, ui->pteMonitor, &QPlainTextEdit::clear);
-    connect(ui->rbHex, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
-    connect(ui->rbText, &QRadioButton::clicked, this, &MainWindow::slRadioBtnClicked);
+    connect(ui->rbHex, &QRadioButton::clicked, ui->actHex, &QAction::trigger);
+    connect(ui->rbText, &QRadioButton::clicked, ui->actText, &QAction::trigger);
     connect(m_serial, &QSerialPort::readyRead, this, &MainWindow::slReadData);
     connect(ui->leSend, &QLineEdit::textChanged, this, &MainWindow::slSendComandChange);
+    connect(ui->actHex, &QAction::triggered, this, &MainWindow::slModeChange);
+    connect(ui->actText, &QAction::triggered, this, &MainWindow::slModeChange);
     ui->lSelectPort->setText(setDialog->settings().name);
     slApply();
     m_msgTimer.restart();
@@ -136,20 +138,27 @@ void MainWindow::on_btnSend_clicked()
     m_indexHistory = 0;
 }
 
-void MainWindow::slRadioBtnClicked()
+void MainWindow::slModeChange()
 {
-    static QRadioButton *lastClicked = nullptr;
-    auto rb = dynamic_cast<QRadioButton *>(sender());
-    Q_ASSERT(rb);
-    if (lastClicked != rb) {
-        lastClicked = rb;
-        ui->pteMonitor->clear();
-        for (HistoryStruct item: m_historyRxTx) {
-            printMsg(item);
-        }
-        QByteArray ar = convertToSend(ui->leSend->text(), !ui->rbHex->isChecked());
-        ui->leSend->setText(convertToPrint(ar, ui->rbHex->isChecked()));
+    static QAction *lastMode = nullptr;
+    auto act = dynamic_cast<QAction *>(sender());
+
+    Q_ASSERT(act);
+    if (lastMode == act) {
+        return;
     }
+    lastMode = act;
+    if (act == ui->actHex) {
+        ui->rbHex->setChecked(true);
+    } else {
+        ui->rbText->setChecked(true);
+    }
+    ui->pteMonitor->clear();
+    for (HistoryStruct item: m_historyRxTx) {
+        printMsg(item);
+    }
+    QByteArray ar = convertToSend(ui->leSend->text(), !ui->rbHex->isChecked());
+    ui->leSend->setText(convertToPrint(ar, ui->rbHex->isChecked()));
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
