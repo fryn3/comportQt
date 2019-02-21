@@ -27,24 +27,26 @@ protected slots:
     void slRadioBtnClicked();
     void slSendComandChange(const QString &newText);
 protected:
-    virtual void keyPressEvent(QKeyEvent *event) override;
-private:
-    Ui::MainWindow *ui;
-    SettingsDialog *setDialog;
-    SettingsDialog::Settings m_settings;
-    QSerialPort *m_serial;
-    int m_indexHistory = 0;
     struct HistoryStruct
     {
         bool isTx;
         QByteArray data;
         qint64 time;
     };
+    virtual void keyPressEvent(QKeyEvent *event) override;
+    void printMsg(bool isTx, QByteArray data, qint64 time);
+    void printMsg(HistoryStruct histItem);
+    QString convertToPrint(QByteArray hex, bool isHex);
+    QByteArray convertToSend(QString msg, bool isHex);
+private:
+    Ui::MainWindow *ui;
+    SettingsDialog *setDialog;
+    SettingsDialog::Settings m_settings;
+    QSerialPort *m_serial;
+    int m_indexHistory = 0;
     QVector<HistoryStruct> m_historyRxTx;
     QVector<QByteArray> m_historyTx;
     QElapsedTimer m_msgTimer;
-    void printMsg(bool isTx, QByteArray data, qint64 time);
-    void printMsg(HistoryStruct histItem);
 };
 
 #endif // MAINWINDOW_H
